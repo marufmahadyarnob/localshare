@@ -1,0 +1,6 @@
+{
+  "name": "LocalShare",
+  "description": "Offline local Wi-Fi file and text sharing via embedded HTTP server with automated release system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,76 @@
+name: Build & APK Artifacts
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package APKs
+    runs-on: ubuntu-latest
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4g -Dfile.encoding=UTF-8 -Djava.awt.headless=true' -Djava.awt.headless=true"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Make Gradlew Executable
+        run: chmod +x gradlew
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Setup Keystores
+        run: |
+          # Restore debug keystore from base64 if available, or generate standard debug keystore
+          if [ -f "debug.keystore.base64" ]; then
+            base64 --decode debug.keystore.base64 > debug.keystore 2>/dev/null || base64 -d debug.keystore.base64 > debug.keystore || true
+          fi
+          if [ ! -f "debug.keystore" ]; then
+            keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug, O=Android, C=US"
+          fi
+          cp debug.keystore app/debug.keystore 2>/dev/null || true
+          
+          # Prepare release keystore
+          if [ ! -f "release.keystore" ]; then
+            keytool -genkey -v -keystore release.keystore -alias localshare -keyalg RSA -keysize 2048 -validity 10000 -storepass localsharepass -keypass localsharepass -dname "CN=LocalShare, OU=Mobile, O=LocalShare, L=Global, S=Global, C=US"
+          fi
+          cp release.keystore app/release.keystore 2>/dev/null || true
+
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Assemble Debug and Release APKs
+        env:
+          SIGNING_KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
+          SIGNING_KEYSTORE_PASSWORD: localsharepass
+          SIGNING_KEY_ALIAS: localshare
+          SIGNING_KEY_PASSWORD: localsharepass
+        run: |
+          ./gradlew assembleDebug assembleRelease --no-daemon
+
+      - name: Organize APK Artifacts
+        run: |
+          mkdir -p apks
+          find app/build/outputs/apk -type f -name "*.apk" -exec cp {} apks/ \;
+          ls -la apks/
+
+      - name: Upload APKs as Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocalShare-APKs
+          path: apks/*.apk
+          retention-days: 14

@@ -1,0 +1,177 @@
+name: Automated Release & APK Builder
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4g -Dfile.encoding=UTF-8 -Djava.awt.headless=true' -Djava.awt.headless=true"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make Gradlew Executable
+        run: chmod +x gradlew
+
+      - name: Extract Version Info
+        id: versioning
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW_VERSION="${{ github.event.inputs.version }}"
+            VERSION_TAG="v${RAW_VERSION#v}"
+            VERSION_NAME="${RAW_VERSION#v}"
+          else
+            VERSION_TAG="${GITHUB_REF#refs/tags/}"
+            VERSION_NAME="${VERSION_TAG#v}"
+          fi
+
+          echo "VERSION_TAG=$VERSION_TAG" >> $GITHUB_ENV
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+
+          # Parse SemVer (MAJOR.MINOR.PATCH) for unique versionCode
+          IFS='.' read -r -a VERSION_PARTS <<< "$VERSION_NAME"
+          MAJOR="${VERSION_PARTS[0]:-1}"
+          MINOR="${VERSION_PARTS[1]:-0}"
+          PATCH="${VERSION_PARTS[2]:-0}"
+          
+          # Clean any trailing suffix like -beta
+          PATCH_CLEAN=$(echo "$PATCH" | sed 's/[^0-9].*//')
+          
+          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH_CLEAN))
+          if [ "$VERSION_CODE" -le 0 ]; then
+            VERSION_CODE=1
+          fi
+          
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "Building Version Name: $VERSION_NAME (Version Code: $VERSION_CODE)"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Setup Keystore
+        id: keystore
+        run: |
+          chmod +x gradlew 2>/dev/null || true
+          
+          # Prepare debug keystore
+          if [ -f "debug.keystore.base64" ]; then
+            base64 --decode debug.keystore.base64 > debug.keystore 2>/dev/null || base64 -d debug.keystore.base64 > debug.keystore || true
+          fi
+          if [ ! -f "debug.keystore" ]; then
+            keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug, O=Android, C=US"
+          fi
+          cp debug.keystore app/debug.keystore 2>/dev/null || true
+          
+          # Prepare release keystore
+          if [ -n "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" ]; then
+            echo "Using repository secret keystore..."
+            echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > release.keystore 2>/dev/null || echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+            echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+          else
+            echo "Generating automated release keystore..."
+            keytool -genkey -v -keystore release.keystore -alias localshare -keyalg RSA -keysize 2048 -validity 10000 -storepass localsharepass -keypass localsharepass -dname "CN=LocalShare, OU=Mobile, O=LocalShare, L=Global, S=Global, C=US"
+            echo "KEYSTORE_PASSWORD=localsharepass" >> $GITHUB_ENV
+            echo "KEY_ALIAS=localshare" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=localsharepass" >> $GITHUB_ENV
+          fi
+          
+          cp release.keystore app/release.keystore 2>/dev/null || true
+          echo "KEYSTORE_FILE=${{ github.workspace }}/release.keystore" >> $GITHUB_ENV
+
+      - name: Build Release APK
+        env:
+          SIGNING_KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
+          SIGNING_KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ env.KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            -PversionName="${{ env.VERSION_NAME }}" \
+            -PversionCode="${{ env.VERSION_CODE }}" \
+            --no-daemon
+
+      - name: Prepare Release Artifacts
+        run: |
+          mkdir -p release_assets
+          
+          # Locate built release APK
+          RELEASE_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          
+          if [ -z "$RELEASE_APK" ]; then
+            echo "Release APK not found! Falling back to any generated APK..."
+            RELEASE_APK=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          fi
+          
+          FINAL_APK_NAME="LocalShare-v${{ env.VERSION_NAME }}.apk"
+          cp "$RELEASE_APK" "release_assets/$FINAL_APK_NAME"
+          
+          # Generate SHA-256 Checksum
+          cd release_assets
+          sha256sum "$FINAL_APK_NAME" > "${FINAL_APK_NAME}.sha256"
+          cd ..
+
+      - name: Generate Changelog & Release Notes
+        id: release_notes
+        run: |
+          cat << 'EOF' > release_notes.md
+          ## ⚡ LocalShare Release ${{ env.VERSION_TAG }}
+
+          ### 📦 Download APK
+          - **File**: `LocalShare-v${{ env.VERSION_NAME }}.apk`
+          - Verify checksum with the attached `.sha256` file.
+
+          ### 🌟 Highlights
+          - ⚡ **Zero Cloud & Offline**: Fast Wi-Fi sharing directly between devices.
+          - 🌐 **Instant Browser UI**: Any PC, Mac, iPhone, or Linux device connects via browser.
+          - 📲 **QR Code Pairing**: Instant scan and connect.
+          - 📁 **File & Media Transfers**: Send & receive photos, videos, docs, and any files with live progress.
+          - 💬 **Shared Text**: Send notes, links, and long text messages with 1-click copy & .txt download.
+          - 🎨 **Crafted by Maruf**: Clean Material 3 design with dedicated dark/light styling.
+
+          ---
+          *Automated APK build created by GitHub Actions.*
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION_TAG }}
+          name: "LocalShare ${{ env.VERSION_TAG }}"
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease || false }}
+          files: |
+            release_assets/LocalShare-v${{ env.VERSION_NAME }}.apk
+            release_assets/LocalShare-v${{ env.VERSION_NAME }}.apk.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

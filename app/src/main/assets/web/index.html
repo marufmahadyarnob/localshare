@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LocalShare</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --surface: #131b2e;
+      --surface-hover: #1c2742;
+      --surface-border: #243254;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --primary-alpha: rgba(56, 189, 248, 0.12);
+      --accent: #818cf8;
+      --success: #10b981;
+      --danger: #f87171;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root[data-theme="auto"], :root[data-theme="light"] {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-hover: #f1f5f9;
+        --surface-border: #e2e8f0;
+        --primary: #0284c7;
+        --primary-hover: #0369a1;
+        --primary-alpha: rgba(2, 132, 199, 0.1);
+        --accent: #6366f1;
+        --success: #10b981;
+        --danger: #ef4444;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--font);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 4px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35);
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 0.8rem;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: opacity 0.2s;
+    }
+
+    .brand-sub:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
+    /* Status Dot */
+    .status-bulb {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--success);
+      box-shadow: 0 0 10px var(--success);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.85); }
+    }
+
+    /* Drop Zone */
+    .dropzone {
+      background: var(--surface);
+      border: 2px dashed var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 30px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--primary);
+      background: var(--primary-alpha);
+    }
+
+    .dropzone-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--primary-alpha);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+
+    .dropzone:hover .dropzone-icon {
+      transform: translateY(-2px);
+    }
+
+    .dropzone-text {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .dropzone-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .file-input {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    /* Upload Progress */
+    .progress-container {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .progress-filename {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 75%;
+    }
+
+    .progress-bar-bg {
+      height: 6px;
+      width: 100%;
+      background: var(--surface-hover);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 4px;
+      transition: width 0.15s ease-out;
+    }
+
+    .progress-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Cards */
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-count {
+      font-size: 0.75rem;
+      background: var(--primary-alpha);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #0b0f19;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--surface-hover);
+      color: var(--text);
+      border: 1px solid var(--surface-border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-border);
+    }
+
+    .btn-danger-ghost {
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .btn-danger-ghost:hover {
+      color: var(--danger);
+      background: rgba(248, 113, 113, 0.1);
+    }
+
+    .btn-icon {
+      padding: 7px;
+      border-radius: 8px;
+      line-height: 1;
+    }
+
+    /* Lists */
+    .file-list, .text-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px 12px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--surface-hover);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      transition: background 0.15s;
+    }
+
+    .file-info-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .file-icon-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .file-icon-img { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .file-icon-vid { background: rgba(244, 114, 182, 0.15); color: #f472b6; }
+    .file-icon-aud { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .file-icon-doc { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+    .file-icon-gen { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+
+    .file-details {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .file-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    /* Text Cards */
+    .text-card {
+      background: var(--surface-hover);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .text-card:hover {
+      border-color: var(--primary);
+    }
+
+    .text-card-content {
+      font-size: 0.88rem;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .text-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--surface-border);
+      padding-top: 6px;
+    }
+
+    .text-card-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    /* Text Area */
+    .text-area {
+      width: 100%;
+      min-height: 80px;
+      max-height: 220px;
+      padding: 10px 12px;
+      background: var(--surface-hover);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .text-area:focus {
+      border-color: var(--primary);
+    }
+
+    .text-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 6px;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      padding: 16px;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 520px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transform: translateY(12px);
+      transition: transform 0.2s ease;
+    }
+
+    .modal-overlay.active .modal-box {
+      transform: translateY(0);
+    }
+
+    .modal-preview-media {
+      max-width: 100%;
+      max-height: 50vh;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      margin: 0 auto;
+      display: block;
+    }
+
+    .full-text-box {
+      background: var(--surface-hover);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      max-height: 50vh;
+      overflow-y: auto;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--surface-border);
+      padding: 8px 16px;
+      border-radius: 24px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+      z-index: 2000;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="logo-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">LocalShare</h1>
+          <a href="https://wa.me/8801777205950" target="_blank" rel="noopener noreferrer" class="brand-sub">
+            Crafted by Maruf
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+          </a>
+        </div>
+      </div>
+      <div class="status-bulb" title="Active on Wi-Fi">
+        <span class="status-dot"></span>
+      </div>
+    </header>
+
+    <!-- Upload Drop Zone -->
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" class="file-input" multiple>
+      <div class="dropzone-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+      </div>
+      <div>
+        <div class="dropzone-text">+ Add Files</div>
+        <div class="dropzone-sub">Drop files here or tap to upload</div>
+      </div>
+    </div>
+
+    <!-- Live Upload Progress -->
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-header">
+        <span class="progress-filename" id="progressFilename">uploading...</span>
+        <span class="progress-percentage" id="progressPercentage">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBarFill"></div>
+      </div>
+      <div class="progress-footer">
+        <span id="progressSize">0 MB / 0 MB</span>
+        <span id="progressSpeed">-- MB/s</span>
+      </div>
+    </div>
+
+    <!-- Shared Files Section -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <span>Files</span>
+          <span class="section-count" id="fileCount">0</span>
+        </div>
+        <button class="btn btn-secondary btn-icon" id="refreshBtn" title="Refresh">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="file-list" id="fileList">
+        <div class="empty-state">No files shared yet.</div>
+      </div>
+    </div>
+
+    <!-- Text Sharing Section -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <span>Text</span>
+          <span class="section-count" id="textCount">0</span>
+        </div>
+      </div>
+
+      <div>
+        <textarea id="textInput" class="text-area" placeholder="Write or paste large text, links, or notes..."></textarea>
+        <div class="text-actions">
+          <button class="btn btn-primary" id="sendTextBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            Send
+          </button>
+        </div>
+      </div>
+
+      <div class="text-list" id="textList">
+        <div class="empty-state">No text messages shared yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Text Modal -->
+  <div class="modal-overlay" id="textModal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1rem; font-weight: 700;">Shared Text</h3>
+        <button class="btn btn-secondary btn-icon" id="closeTextModalBtn">✕</button>
+      </div>
+      <div class="full-text-box" id="fullTextContent"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span id="textMetaInfo" style="font-size: 0.75rem; color: var(--text-muted);"></span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" id="modalDownloadTxtBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            .txt
+          </button>
+          <button class="btn btn-primary" id="modalCopyBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal-box">
+      <h3 style="font-size: 1rem; font-weight: 700;">Delete Item?</h3>
+      <p id="deleteItemName" style="font-size: 0.85rem; color: var(--text-muted); word-break: break-word;"></p>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px;">
+        <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+        <button class="btn btn-primary" style="background: var(--danger); color: white;" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
+  <div class="modal-overlay" id="previewModal">
+    <div class="modal-box" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 id="previewTitle" style="font-size: 0.95rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">Preview</h3>
+        <button class="btn btn-secondary btn-icon" id="closePreviewBtn">✕</button>
+      </div>
+      <div id="previewBody" style="text-align: center; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+      </div>
+      <div style="display: flex; justify-content: flex-end;">
+        <a id="previewDownloadLink" href="#" class="btn btn-primary" download>Download</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">Copied</div>
+
+  <script>
+    // State
+    let pendingDeleteType = null;
+    let pendingDeleteId = null;
+    let currentModalText = "";
+    let currentModalTextId = null;
+
+    // Elements
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFilename = document.getElementById('progressFilename');
+    const progressPercentage = document.getElementById('progressPercentage');
+    const progressBarFill = document.getElementById('progressBarFill');
+    const progressSize = document.getElementById('progressSize');
+    const progressSpeed = document.getElementById('progressSpeed');
+
+    const fileList = document.getElementById('fileList');
+    const fileCount = document.getElementById('fileCount');
+    const textList = document.getElementById('textList');
+    const textCount = document.getElementById('textCount');
+    const textInput = document.getElementById('textInput');
+    const sendTextBtn = document.getElementById('sendTextBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    const textModal = document.getElementById('textModal');
+    const fullTextContent = document.getElementById('fullTextContent');
+    const textMetaInfo = document.getElementById('textMetaInfo');
+    const modalCopyBtn = document.getElementById('modalCopyBtn');
+    const modalDownloadTxtBtn = document.getElementById('modalDownloadTxtBtn');
+    const closeTextModalBtn = document.getElementById('closeTextModalBtn');
+
+    const deleteModal = document.getElementById('deleteModal');
+    const deleteItemName = document.getElementById('deleteItemName');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+
+    const previewModal = document.getElementById('previewModal');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewBody = document.getElementById('previewBody');
+    const previewDownloadLink = document.getElementById('previewDownloadLink');
+    const closePreviewBtn = document.getElementById('closePreviewBtn');
+    const toast = document.getElementById('toast');
+
+    // Utility: Toast
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // Utility: Format bytes
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return (bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1) + ' ' + sizes[i];
+    }
+
+    // Utility: Format time
+    function formatTime(timestamp) {
+      if (!timestamp) return '';
+      const d = new Date(timestamp);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Fetch Files
+    async function fetchFiles() {
+      try {
+        const res = await fetch('/api/files');
+        if (res.ok) {
+          const files = await res.json();
+          renderFiles(files);
+        }
+      } catch (err) {}
+    }
+
+    // Fetch Texts
+    async function fetchTexts() {
+      try {
+        const res = await fetch('/api/text');
+        if (res.ok) {
+          const texts = await res.json();
+          renderTexts(texts);
+        }
+      } catch (err) {}
+    }
+
+    // Render Files
+    function renderFiles(files) {
+      fileCount.textContent = files.length;
+      if (!files || files.length === 0) {
+        fileList.innerHTML = '<div class="empty-state">No files shared yet.</div>';
+        return;
+      }
+
+      fileList.innerHTML = files.map(file => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        let iconClass = 'file-icon-gen';
+        let iconSymbol = '📄';
+        let isMedia = false;
+
+        if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'bmp'].includes(ext)) {
+          iconClass = 'file-icon-img';
+          iconSymbol = '🖼';
+          isMedia = true;
+        } else if (['mp4', 'mkv', 'mov', 'webm', 'avi', '3gp'].includes(ext)) {
+          iconClass = 'file-icon-vid';
+          iconSymbol = '🎬';
+          isMedia = true;
+        } else if (['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'].includes(ext)) {
+          iconClass = 'file-icon-aud';
+          iconSymbol = '🎵';
+          isMedia = true;
+        } else if (['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+          iconClass = 'file-icon-doc';
+          iconSymbol = '📑';
+          if (ext === 'pdf') isMedia = true;
+        }
+
+        const safeId = encodeURIComponent(file.id);
+        const safeName = file.name.replace(/"/g, '&quot;');
+
+        return `
+          <div class="file-item">
+            <div class="file-info-group">
+              <div class="file-icon-box ${iconClass}">${iconSymbol}</div>
+              <div class="file-details">
+                <div class="file-name" title="${safeName}">${safeName}</div>
+                <div class="file-sub">
+                  <span>${formatBytes(file.size)}</span>
+                  <span>•</span>
+                  <span>${formatTime(file.addedTime)}</span>
+                </div>
+              </div>
+            </div>
+            <div class="file-actions">
+              ${isMedia ? `
+                <button class="btn btn-secondary btn-icon" onclick="openPreview('${safeId}', '${safeName}', '${ext}')" title="Preview">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              ` : ''}
+              <a href="/api/files/${safeId}/download" class="btn btn-secondary btn-icon" title="Download" download>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </a>
+              <button class="btn btn-danger-ghost btn-icon" onclick="promptDelete('file', '${safeId}', '${safeName}')" title="Delete">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Texts
+    function renderTexts(texts) {
+      textCount.textContent = texts.length;
+      if (!texts || texts.length === 0) {
+        textList.innerHTML = '<div class="empty-state">No text messages shared yet.</div>';
+        return;
+      }
+
+      textList.innerHTML = texts.map(item => {
+        const safeId = encodeURIComponent(item.id);
+        const rawContent = item.content;
+        const safeText = rawContent
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+        return `
+          <div class="text-card" onclick="openTextModal('${safeId}', ${JSON.stringify(rawContent)}, ${item.addedTime}, '${item.senderDevice}')">
+            <div class="text-card-content">${safeText}</div>
+            <div class="text-card-footer">
+              <span>${item.senderDevice || 'Device'} • ${formatTime(item.addedTime)}</span>
+              <div class="text-card-actions" onclick="event.stopPropagation()">
+                <button class="btn btn-secondary btn-icon" style="height: 28px; width: 28px;" onclick="copyText(${JSON.stringify(rawContent)})" title="Copy">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+                <a href="/api/text/${safeId}/download" class="btn btn-secondary btn-icon" style="height: 28px; width: 28px;" title="Download .txt" download>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                </a>
+                <button class="btn btn-danger-ghost btn-icon" style="height: 28px; width: 28px;" onclick="promptDelete('text', '${safeId}', 'this text snippet')" title="Delete">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Open Full Text Modal
+    function openTextModal(id, content, addedTime, sender) {
+      currentModalText = content;
+      currentModalTextId = id;
+      fullTextContent.textContent = content;
+      textMetaInfo.textContent = `${content.length} characters • ${sender || 'Device'} • ${formatTime(addedTime)}`;
+      textModal.classList.add('active');
+    }
+
+    closeTextModalBtn.addEventListener('click', () => {
+      textModal.classList.remove('active');
+    });
+
+    modalCopyBtn.addEventListener('click', () => {
+      copyText(currentModalText);
+    });
+
+    modalDownloadTxtBtn.addEventListener('click', () => {
+      if (currentModalTextId) {
+        window.location.href = `/api/text/${currentModalTextId}/download`;
+      } else {
+        const blob = new Blob([currentModalText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Text_${Date.now()}.txt`;
+        a.click();
+      }
+    });
+
+    // Upload Files
+    async function uploadFiles(files) {
+      if (!files || files.length === 0) return;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        await uploadSingleFile(file, i + 1, files.length);
+      }
+
+      progressContainer.style.display = 'none';
+      fetchFiles();
+      showToast('Uploaded successfully');
+    }
+
+    function uploadSingleFile(file, currentIdx, totalCount) {
+      return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+
+        progressContainer.style.display = 'flex';
+        progressFilename.textContent = `(${currentIdx}/${totalCount}) ${file.name}`;
+        progressBarFill.style.width = '0%';
+        progressPercentage.textContent = '0%';
+
+        let startTime = Date.now();
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            progressBarFill.style.width = percent + '%';
+            progressPercentage.textContent = percent + '%';
+            progressSize.textContent = `${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+
+            const elapsed = (Date.now() - startTime) / 1000;
+            if (elapsed > 0.2) {
+              const speed = e.loaded / elapsed;
+              progressSpeed.textContent = `${formatBytes(speed)}/s`;
+            }
+          }
+        };
+
+        xhr.onload = () => {
+          resolve();
+        };
+
+        xhr.onerror = () => {
+          showToast('Upload error');
+          resolve();
+        };
+
+        xhr.open('POST', '/api/upload', true);
+        xhr.send(formData);
+      });
+    }
+
+    // Text Send
+    sendTextBtn.addEventListener('click', async () => {
+      const content = textInput.value.trim();
+      if (!content) return;
+
+      sendTextBtn.disabled = true;
+      try {
+        const res = await fetch('/api/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        });
+        if (res.ok) {
+          textInput.value = '';
+          fetchTexts();
+          showToast('Sent');
+        } else {
+          showToast('Failed to send');
+        }
+      } catch (err) {
+        showToast('Network error');
+      } finally {
+        sendTextBtn.disabled = false;
+      }
+    });
+
+    // Copy Text
+    function copyText(str) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(str).then(() => showToast('Copied'));
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = str;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('Copied');
+      }
+    }
+
+    // Delete Modal
+    function promptDelete(type, id, name) {
+      pendingDeleteType = type;
+      pendingDeleteId = id;
+      deleteItemName.textContent = `Are you sure you want to delete "${name}"?`;
+      deleteModal.classList.add('active');
+    }
+
+    cancelDeleteBtn.addEventListener('click', () => {
+      deleteModal.classList.remove('active');
+      pendingDeleteType = null;
+      pendingDeleteId = null;
+    });
+
+    confirmDeleteBtn.addEventListener('click', async () => {
+      if (!pendingDeleteType || !pendingDeleteId) return;
+
+      const endpoint = pendingDeleteType === 'file' 
+        ? `/api/files/${pendingDeleteId}` 
+        : `/api/text/${pendingDeleteId}`;
+
+      try {
+        const res = await fetch(endpoint, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('Deleted');
+          if (pendingDeleteType === 'file') fetchFiles();
+          else fetchTexts();
+        }
+      } catch (err) {}
+      deleteModal.classList.remove('active');
+    });
+
+    // Preview
+    function openPreview(id, name, ext) {
+      previewTitle.textContent = name;
+      const downloadUrl = `/api/files/${id}/download`;
+      const previewUrl = `/api/files/${id}/preview`;
+      previewDownloadLink.href = downloadUrl;
+      previewDownloadLink.setAttribute('download', name);
+
+      if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'bmp'].includes(ext)) {
+        previewBody.innerHTML = `<img src="${previewUrl}" class="modal-preview-media" alt="${name}">`;
+      } else if (['mp4', 'webm', 'mov', '3gp'].includes(ext)) {
+        previewBody.innerHTML = `<video src="${previewUrl}" controls autoplay class="modal-preview-media" style="width: 100%;"></video>`;
+      } else if (['mp3', 'wav', 'ogg', 'm4a', 'flac'].includes(ext)) {
+        previewBody.innerHTML = `<audio src="${previewUrl}" controls autoplay style="width: 100%; margin: 16px 0;"></audio>`;
+      } else if (ext === 'pdf') {
+        previewBody.innerHTML = `<iframe src="${previewUrl}" style="width: 100%; height: 50vh; border: none; border-radius: 8px;"></iframe>`;
+      } else {
+        previewBody.innerHTML = `<p style="color: var(--text-muted);">Preview not available.</p>`;
+      }
+
+      previewModal.classList.add('active');
+    }
+
+    closePreviewBtn.addEventListener('click', () => {
+      previewBody.innerHTML = '';
+      previewModal.classList.remove('active');
+    });
+
+    // Drag & Drop
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('dragover');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+      }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      uploadFiles(files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      uploadFiles(e.target.files);
+      fileInput.value = '';
+    });
+
+    refreshBtn.addEventListener('click', () => {
+      fetchFiles();
+      fetchTexts();
+      showToast('Refreshed');
+    });
+
+    // Auto-polling every 4 seconds
+    setInterval(() => {
+      fetchFiles();
+      fetchTexts();
+    }, 4000);
+
+    // Initial load
+    fetchFiles();
+    fetchTexts();
+  </script>
+</body>
+</html>
